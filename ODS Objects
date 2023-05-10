@@ -1,0 +1,193 @@
+ODS Tables.txt
+CREATE TABLE HOSPITALS
+(
+   Hospital_Name                VARCHAR2 (100) NOT NULL,
+   CMD                          VARCHAR2 (100),
+   Hospital_Type                VARCHAR2 (40),
+   Senatorial_district          VARCHAR2 (20),
+   LGA_Name                     VARCHAR2 (20),
+   State                        VARCHAR2 (20) DEFAULT 'Kwara',
+   Town_name                    VARCHAR2 (20),
+   Town_leader                  VARCHAR2 (60),
+   TYPE                         VARCHAR2 (20),
+   Town_population_estimate     NUMBER,
+   Population_source            VARCHAR2 (40),
+   Hospital_Contact             VARCHAR2 (30),
+   Emergencies_Hours            VARCHAR2 (15),
+   Year_Of_Establishment        VARCHAR2 (4),
+   Morgue_availability          CHAR (3),
+   Security_system              VARCHAR2 (40),
+   Records_Mgt_Technique        VARCHAR2 (40),
+   Sensitization_Technique      VARCHAR2 (40)
+);
+
+
+CREATE TABLE HOSPITAL_EQUIPMENT_FIG
+(
+   Hospital_Name            VARCHAR2 (100),
+   No_Wards                 VARCHAR2 (15),
+   No_Beds                  VARCHAR2 (15),
+   No_Toilets               VARCHAR2 (15),
+   No_Ambulances            VARCHAR2 (15),
+   No_X_Ray                 VARCHAR2 (15),
+   No_Generator             VARCHAR2 (15),
+   No_Stretchers            VARCHAR2 (15),
+   No_Life_Support          VARCHAR2 (15),
+   No_Ultra_Sound_Machine   VARCHAR2 (15),
+   No_Ambulatory_Bags       VARCHAR2 (15),
+   No_Mucus_Extractors      VARCHAR2 (15),
+   No_Wheelchairs           VARCHAR2 (15),
+   Other_Equipment          VARCHAR2 (600)
+);
+
+
+CREATE TABLE HOSPITAL_STAFFS_FIG
+(
+   Hospital_Name          VARCHAR2 (100),
+   No_Consultants         VARCHAR2 (15),
+   No_Medical_Officers    VARCHAR2 (15),
+   No_Nurses              VARCHAR2 (15),
+   No_Laboratory_Staff    VARCHAR2 (15),
+   Specialist_Available   VARCHAR2 (400)
+);
+
+CREATE TABLE HOSPITAL_SERVICES
+(
+   Hospital_Name                VARCHAR2 (100),
+   Specialist_Available         VARCHAR2 (400),
+   Provision_of_Food            VARCHAR2 (10),
+   Source_of_Food               VARCHAR2 (70),
+   Agencies_Providing_Support   VARCHAR2 (100),
+   All_day_service              CHAR (3),                     --Hospital_Hours
+   Emergencies_Hours            VARCHAR2 (10),
+   Inpaient_Hours               VARCHAR2 (10),
+   Outpatient_Hours             VARCHAR2 (10)
+);
+
+
+
+CREATE TABLE HOSPITAL_CHALLENGES
+(
+   Hospital_Name               VARCHAR2 (100),
+   Bad_Road_Network            CHAR (3),
+   Bad_Telecom                 CHAR (3),
+   Poor_Response_Emergency     CHAR (3),
+   Inadequate_Ambulance        CHAR (3),
+   Inadequate_Wards            CHAR (3),
+   Inadequate_Doctors          CHAR (3),
+   Inadequate_Nurses           CHAR (3),
+   Inadequate_Health_Workers   CHAR (3),
+   Inadequate_Drugs            CHAR (3),
+   Record_Management           CHAR (4),
+   Modern_Technology           CHAR (4),
+   Power_Supply                CHAR (4),
+   Water_Supply                CHAR (4),
+   Sanitary_System             CHAR (4),
+   Hospital_Maintenance        CHAR (4),
+   Environment_Challenges      CHAR (3),
+   Insecurity                  CHAR (3),
+   Hospital_Congestion         CHAR (3),
+   Mobidity                    CHAR (3),
+   Laboratory_Condition        CHAR (4),
+   Others                      VARCHAR2 (700)
+);
+
+
+CREATE TABLE HOSPITAL_FACILITIES
+(
+   Hospital_Name           VARCHAR2 (100),
+   Laboratory_Hours        VARCHAR2 (10),
+   Microbiological_Test    CHAR (3),
+   Chemical_Pathology      CHAR (3),
+   Availability_Drugs      VARCHAR2 (10),
+   Record_Drugs_Reaction   CHAR (3),
+   Minimum_Reorder_Level   VARCHAR2 (20),
+   Sources_Of_Drugs        VARCHAR2 (100)
+);
+
+
+CREATE TABLE HOSPITAL_EMPLOYEES
+(
+   Hospital_Name     VARCHAR2 (100),
+   Staff_ID          NUMBER,
+   Full_Name         VARCHAR2 (100),
+   Employment_Type   VARCHAR2 (40),
+   Specialization    VARCHAR2 (40),
+   Grade_Level       VARCHAR2 (8),
+   Working_Hours     VARCHAR2 (8)
+);
+
+
+CREATE TABLE TEENAGE_PREGNANCY
+(
+   Hospital_Name              VARCHAR2 (100),
+   TP_No_Occurence            VARCHAR2 (8),
+   TP_Successful_deliveries   VARCHAR2 (8),
+   TP_Failed_deliveries       VARCHAR2 (8),
+   TP_Resulting_death         VARCHAR2 (8),
+   TP_Major_causes            VARCHAR2 (200),
+   Year                       NUMBER,
+   status            varchar2(40),
+   date_processed    varchar2(20)
+);
+
+
+CREATE TABLE MATERNITY_MORTALITY
+(
+   Hospital_Name     VARCHAR2 (100),
+   MM_No_Occurence   VARCHAR2 (8),
+   MM_Age_12_19      VARCHAR2 (8),
+   MM_Age_20_35      VARCHAR2 (8),
+   MM_Age_36_49      VARCHAR2 (8),
+   MM_Age_50_Above   VARCHAR2 (8),
+   MM_Total          VARCHAR2 (8),
+   Year              NUMBER,
+   status            varchar2(40),
+   date_processed    varchar2(20)
+);
+
+CREATE TABLE CHILD_MORTALITY
+(
+   Hospital_Name     VARCHAR2 (100),
+   CM_No_Occurence   VARCHAR2 (8),
+   CM_Male           VARCHAR2 (8),
+   CM_Female         VARCHAR2 (8),
+   CM_Major_Causes   VARCHAR2 (8),
+   Year              NUMBER,
+   status            varchar2(40),
+   date_processed    varchar2(20)
+);
+
+CREATE TABLE NGO
+(
+   Hospital_Name   VARCHAR2 (100),
+   Agency_Name     VARCHAR2 (200),
+   Impacts         VARCHAR2 (500),
+   Year            NUMBER
+);
+
+
+
+/*
+create or replace procedure clean_slate_proc   --to purge the ODS tables
+as 
+
+--Be SURE you want to do this
+begin
+-- delete from CHILD_MORTALITY;
+-- delete from HOSPITAL_CHALLENGES;
+-- delete from HOSPITAL_EMPLOYEES;
+-- delete from HOSPITAL_EQUIPMENT_FIG;
+-- delete from HOSPITAL_FACILITIES;
+-- delete from HOSPITAL_SERVICES;
+-- delete from HOSPITAL_STAFFS_FIG;
+-- delete from HOSPITALS;
+-- delete from MATERNITY_MORTALITY;
+-- delete from NGO;
+-- delete from ROW_COUNT_ODS;
+-- delete from TEENAGE_PREGNANCY;
+commit;
+
+end;
+
+*/
