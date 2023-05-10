@@ -1,0 +1,35 @@
+Data Warehousing Team Tasks Outline.txt
+TASKS
+1. Create Schemas (ODS, STG, EDW, EDM).
+
+2. create database tables in ODS (with column names and table names as in the 'data warehousing document').
+
+3. import data into ODS table from the data source.
+
+4. CHECK the data in the ODS tables to see consistency with the data source.
+
+6. Data cleansing of the ODS tables.
+
+7. Grant 'SELECT' on all ODS tables to STG.
+
+8. Create sequences in the STG schema (as specified in 'data warehousing document').
+
+9. Create dimension tables in EDW (using column names and table names as specified in the 'data warehousing document'
+
+10. Grant 'ALL' on all EDW dimension tables to STG.
+
+11. in STG schema, Write a Package to lift data from the ODS tables and populate the EDW dimension tables.
+
+12. Test run the procedure (TROUBLESHOOT) #
+
+13. CHECK the data in EDW against the data in ODS to see consistency.
+
+14. Create Facts tables in EDW
+
+15. Grant 'ALL' on all EDW Facts tables to STG.
+
+16. Write a PARAMETERIZED Procedure to populate the EDW FACTS Tables
+
+17. Test run the procedure (TROUBLESHOOT) #
+
+18. CHECK the data in the EDW(Facts and Dimensions)  against the data in ODS to see consistency.
