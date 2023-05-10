@@ -1,0 +1,871 @@
+STG Objects
+CREATE SEQUENCE SENATORIAL_ID_SEQ
+MINVALUE 0
+NOCACHE
+
+CREATE SEQUENCE LGA_ID_SEQ
+MINVALUE 0
+NOCACHE
+
+
+CREATE SEQUENCE TOWN_ID_SEQ
+MINVALUE 0
+NOCACHE
+
+CREATE SEQUENCE Hospital_Id_SEQ
+MINVALUE 0
+NOCACHE
+
+CREATE SEQUENCE Staff_ID_SEQ
+MINVALUE 0
+NOCACHE
+
+
+CREATE OR REPLACE PROCEDURE case_PROC --for setting uniformity in column case for ODS tables
+AS
+BEGIN
+
+/*   Paste on ODS
+    grant update on CHILD_MORTALITY to stg    
+
+   grant update on ngo to stg
+
+   grant update on MATERNITY_MORTALITY  to stg
+
+   grant update on TEENAGE_PREGNANCY to stg
+
+   grant update on HOSPITAL_EMPLOYEES to stg
+
+   grant update on HOSPITAL_FACILITIES to stg
+
+   grant update on HOSPITAL_CHALLENGES to stg
+
+   grant update on HOSPITAL_STAFFS_FIG to stg
+
+   grant update on HOSPITAL_SERVICES  to stg 
+
+   grant update on HOSPITAL_EQUIPMENT_FIG  to stg 
+
+    grant update on HOSPITALS  to stg
+*/
+
+--or do these directly on ODS
+
+create or replace
+begin
+   UPDATE ods.HOSPITALS  
+      SET SENATORIAL_DISTRICT = UPPER (SENATORIAL_DISTRICT);
+
+   UPDATE ods.HOSPITALS
+      SET LGA_Name = UPPER (LGA_Name);
+
+   UPDATE ods.HOSPITALS
+      SET TOWN_NAME = UPPER (TOWN_NAME);
+
+   UPDATE ods.HOSPITALS 
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+   UPDATE ods.HOSPITAL_EQUIPMENT_FIG 
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+   UPDATE ods.HOSPITAL_STAFFS_FIG  
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+   UPDATE ods.HOSPITAL_SERVICES 
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+   UPDATE ods.HOSPITAL_CHALLENGES 
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+   UPDATE ods.HOSPITAL_FACILITIES 
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+   UPDATE ods.HOSPITAL_EMPLOYEES  
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+   UPDATE ods.TEENAGE_PREGNANCY 
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+   UPDATE ods.MATERNITY_MORTALITY  
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+   UPDATE ods.CHILD_MORTALITY  
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+   UPDATE ods.NGO  
+      SET HOSPITAL_NAME = UPPER (HOSPITAL_NAME);
+
+END;
+/
+
+--execute case_PROC
+
+
+CREATE OR REPLACE PROCEDURE YEAR_DIM_PROC --INSERTING INTO YEAR DIMENSION TABLE
+AS
+BEGIN
+   INSERT INTO edw.YEAR_DIM
+        SELECT DISTINCT (YEAR)
+          FROM ods.CHILD_MORTALITY
+          WHERE YEAR NOT IN (SELECT YEAR FROM edw.YEAR_DIM)  --to make sure we only have years within our analysis time bracket
+          and year is not null
+          ORDER BY YEAR;
+END;
+/
+
+--execute YEAR_DIM_PROC
+
+
+--SEQUENCE for ID (SENATORIAL_ID_SEQ) should have been created in stg
+
+CREATE OR REPLACE PROCEDURE S_DIS_PROC              --FOR  INSERTING into S_DISTRICT_DIM 
+IS
+   CURSOR S_DIS_CUR
+   IS
+        SELECT DISTINCT (SENATORIAL_DISTRICT)
+          FROM ods.HOSPITALS
+          WHERE SENATORIAL_DISTRICT NOT IN (SELECT SENATORIAL_DISTRICT FROM edw.S_DISTRICT_DIM)
+      ORDER BY SENATORIAL_DISTRICT;
+      
+BEGIN
+   FOR S_DIS_REC IN S_DIS_CUR
+   LOOP
+      INSERT INTO edw.S_DISTRICT_DIM
+           VALUES (SENATORIAL_ID_SEQ.NEXTVAL, S_DIS_REC.SENATORIAL_DISTRICT);
+    
+   END LOOP;
+
+   COMMIT;
+END;
+/
+
+--execute S_DIS_PROC
+
+
+--SEQUENCE for ID (LGA_ID_SEQ)should have been created in stg
+
+CREATE OR REPLACE PROCEDURE LGA_PROC              --FOR INSERTING into LGA_DIM
+IS
+   CURSOR LGA_CUR
+   IS
+   
+SELECT DISTINCT(HH.LGA_NAME), SD.SENATORIAL_ID,HH.SENATORIAL_DISTRICT
+FROM edw.S_DISTRICT_DIM SD, ods.HOSPITALS HH
+WHERE SD.SENATORIAL_DISTRICT = HH.SENATORIAL_DISTRICT
+AND HH.LGA_NAME NOT IN(SELECT LGA_NAME FROM  edw.LGA_DIM)
+ORDER BY LGA_NAME ;
+       
+BEGIN
+   FOR LGA_REC IN LGA_CUR
+   LOOP
+      INSERT INTO edw.LGA_DIM (LGA_ID, LGA_NAME,SENATORIAL_ID)
+           VALUES (LGA_ID_SEQ.NEXTVAL, LGA_REC.LGA_NAME, LGA_REC.SENATORIAL_ID);
+   END LOOP;
+   
+   COMMIT;
+   
+END;
+/
+
+--execute LGA_PROC
+
+--SEQUENCE for ID (TOWN_ID_SEQ) should have been created in stg
+
+CREATE OR REPLACE PROCEDURE TOWN_DIM_PROC              --FOR INSERTING into TOWN_CITY_DIM
+IS
+   CURSOR town_CUR
+   IS
+   
+        SELECT DISTINCT (TOWN_NAME),
+                        TOWN_LEADER,
+                        TYPE,
+                        TOWN_POPULATION_ESTIMATE,
+                        POPULATION_SOURCE,
+                        LGA_ID,
+                        SENATORIAL_ID
+      FROM ods.HOSPITALS HH, edw.LGA_DIM LG
+      WHERE HH.LGA_NAME = LG.LGA_NAME
+      AND HH.TOWN_NAME NOT IN (SELECT TOWN_NAME FROM  edw.TOWN_CITY_DIM)
+      ORDER BY TOWN_NAME;
+      
+BEGIN
+   FOR town_REC IN town_CUR
+   LOOP
+      INSERT INTO edw.TOWN_CITY_DIM
+           VALUES (TOWN_ID_SEQ.NEXTVAL,
+                   town_REC.TOWN_NAME,
+                   town_REC.TOWN_LEADER,
+                   town_REC.TYPE,
+                   town_REC.TOWN_POPULATION_ESTIMATE,
+                   town_REC.POPULATION_SOURCE,
+                   town_REC.LGA_ID,
+                   town_REC.SENATORIAL_ID);
+                   
+   END LOOP;
+
+   COMMIT;
+END;
+/
+
+--EXECUTE TOWN_DIM_PROC
+
+
+
+--SEQUENCE for ID (Hospital_Id_SEQ) should have been created in stg
+
+CREATE or replace PROCEDURE hospitals_dim_PROC         --FOR INSERTING into HOSPITALS_DIM
+IS
+   CURSOR hospital_CUR
+   IS
+
+        SELECT DISTINCT HOSPITAL_NAME,
+                        CMD,
+                        HOSPITAL_TYPE,
+                        HOSPITAL_CONTACT,
+                        EMERGENCIES_HOURS,
+                        YEAR_OF_ESTABLISHMENT,
+                        MORGUE_AVAILABILITY,
+                        SECURITY_SYSTEM,
+                        RECORDS_MGT_TECHNIQUE,
+                        SENSITIZATION_TECHNIQUE,
+                        town_id,
+                        lga_id,
+                        SENATORIAL_ID
+          FROM ods.HOSPITALS hh, edw.TOWN_CITY_DIM tc
+         WHERE HH.TOWN_NAME = TC.TOWN_NAME
+         and  HOSPITAL_NAME NOT IN (SELECT HOSPITAL_NAME FROM edw.HOSPITALS_DIM )
+      ORDER BY HOSPITAL_NAME;
+
+BEGIN
+   FOR hospital_REC IN hospital_CUR
+   LOOP
+      INSERT INTO edw.HOSPITALS_DIM (HOSPITAL_id,
+                                      HOSPITAL_NAME,
+                                      CMD,
+                                      HOSPITAL_TYPE,
+                                      HOSPITAL_CONTACT,
+                                      EMERGENCIES_HOURS,
+                                      YEAR_OF_ESTABLISHMENT,
+                                      MORGUE_AVAILABILITY,
+                                      SECURITY_SYSTEM,
+                                      RECORDS_MGT_TECHNIQUE,
+                                      SENSITIZATION_TECHNIQUE,
+                                      town_id,
+                                      lga_id,
+                                      SENATORIAL_ID) --remove this specification after  dropping the year column from table
+           VALUES (Hospital_Id_SEQ.NEXTVAL,
+                   hospital_REC.HOSPITAL_NAME,
+                   hospital_REC.CMD,
+                   hospital_REC.HOSPITAL_TYPE,
+                   hospital_REC.HOSPITAL_CONTACT,
+                   hospital_REC.EMERGENCIES_HOURS,
+                   hospital_REC.YEAR_OF_ESTABLISHMENT,
+                   hospital_REC.MORGUE_AVAILABILITY,
+                   hospital_REC.SECURITY_SYSTEM,
+                   hospital_REC.RECORDS_MGT_TECHNIQUE,
+                   hospital_REC.SENSITIZATION_TECHNIQUE,
+                   hospital_REC.town_id,
+                   hospital_REC.lga_id,
+                   hospital_REC.SENATORIAL_ID);
+   END LOOP;
+
+   COMMIT;
+END;
+/
+
+--execute hospitals_dim_PROC;
+
+
+CREATE or replace  PROCEDURE HOSPITAL_CHALLENGES_dim_PROC --FOR INSERTING into HOSPITAL_CHALLENGES
+IS
+BEGIN
+   INSERT INTO edw.HOSPITAL_CHALLENGES_DIM
+        SELECT HC.HOSPITAL_ID,
+               HC.HOSPITAL_NAME,
+               BAD_ROAD_NETWORK,
+               BAD_TELECOM,
+               POOR_RESPONSE_EMERGENCY,
+               INADEQUATE_AMBULANCE,
+               INADEQUATE_WARDS,
+               INADEQUATE_DOCTORS,
+               INADEQUATE_NURSES,
+               INADEQUATE_HEALTH_WORKERS,
+               INADEQUATE_DRUGS,
+               MODERN_TECHNOLOGY,
+               POWER_SUPPLY,
+               WATER_SUPPLY,
+               SANITARY_SYSTEM,
+               HOSPITAL_MAINTENANCE,
+               ENVIRONMENT_CHALLENGES,
+               INSECURITY,
+               HOSPITAL_CONGESTION,
+               MOBIDITY,
+               LABORATORY_CONDITION,
+               OTHERS
+          FROM edw.HOSPITALS_DIM HC, ods.HOSPITAL_CHALLENGES HH
+         WHERE HC.HOSPITAL_NAME = HH.HOSPITAL_NAME
+     AND HOSPITAL_ID NOT IN (SELECT HOSPITAL_ID FROM edw.HOSPITAL_CHALLENGES_DIM)
+      ORDER BY HOSPITAL_ID;
+
+   COMMIT;
+END;
+/
+
+--execute HOSPITAL_CHALLENGES_dim_PROC
+
+
+CREATE or replace PROCEDURE HOSPITAL_FACILITIES_dim_PROC --FOR INSERTING into HOSPITAL_FACILITIES
+IS
+  cursor chem_pat_cur is
+      SELECT CHEMICAL_PATHOLOGY
+        FROM edw.HOSPITAL_FACILITIES_DIM;
+
+BEGIN
+   INSERT INTO edw.HOSPITAL_FACILITIES_DIM (HOSPITAL_ID,
+                                             HOSPITAL_NAME,
+                                             LABORATORY_HOURS,
+                                             MICROBIOLOGICAL_TEST,
+                                             CHEMICAL_PATHOLOGY,
+                                             AVAILABILITY_DRUGS,
+                                             RECORD_DRUGS_REACTION,
+                                             MINIMUM_REORDER_LEVEL,
+                                             SOURCES_OF_DRUGS)
+        
+        SELECT HD.HOSPITAL_ID,
+               HH.HOSPITAL_NAME,
+               HH.LABORATORY_HOURS,
+               HH.MICROBIOLOGICAL_TEST,
+               HH.CHEMICAL_PATHOLOGY,
+               HH.AVAILABILITY_DRUGS,
+               HH.RECORD_DRUGS_REACTION,
+               HH.MINIMUM_REORDER_LEVEL,
+               HH.SOURCES_OF_DRUGS
+       FROM edw.HOSPITALS_DIM HD, ods.HOSPITAL_FACILITIES HH
+       WHERE HD.HOSPITAL_NAME = HH.HOSPITAL_NAME
+       AND HOSPITAL_ID NOT IN (SELECT HOSPITAL_ID FROM edw.HOSPITAL_FACILITIES_DIM)
+      ORDER BY HOSPITAL_ID;
+
+   COMMIT;
+
+for chem_pat_rec in chem_pat_cur
+   loop
+
+      IF chem_pat_rec.CHEMICAL_PATHOLOGY = 'Yes'
+      THEN
+         UPDATE edw.HOSPITAL_FACILITIES_DIM
+            SET LAB_STANDARD = 'Standard'
+          WHERE CHEMICAL_PATHOLOGY = 'Yes';
+      END IF;
+
+      IF chem_pat_rec.CHEMICAL_PATHOLOGY= 'No'
+      THEN
+         UPDATE edw.HOSPITAL_FACILITIES_DIM
+            SET LAB_STANDARD = 'Sub-Standard'
+          WHERE CHEMICAL_PATHOLOGY = 'No';
+      END IF;
+
+      IF chem_pat_rec.CHEMICAL_PATHOLOGY NOT IN ('Yes', 'No')
+      THEN
+         UPDATE edw.HOSPITAL_FACILITIES_DIM
+            SET LAB_STANDARD = 'Unknown'
+          WHERE CHEMICAL_PATHOLOGY NOT IN ('Yes', 'No');
+      END IF;
+
+end loop;
+
+      COMMIT;
+      
+      END;
+/
+
+--execute HOSPITAL_FACILITIES_dim_PROC
+
+
+CREATE OR REPLACE PROCEDURE HOSPITAL_SERVICES_DIM_PROC --FOR INSERTING into HOSPITAL_SERVICES
+IS
+   EMERGENCIES_HOURS   VARCHAR2 (5);
+
+   CURSOR EMERGENCIES_HOURS_cur
+   IS
+   
+      SELECT EMERGENCIES_HOURS FROM edw.HOSPITAL_SERVICES_DIM;
+
+   CURSOR working_hrs_cur
+   IS
+      SELECT hospital_id, EMERGENCIES_HOURS FROM edw.HOSPITALs_DIM;
+
+   CURSOR insurance_cur
+   IS
+      SELECT HOSPITAL_ID, AGENCIES_PROVIDING_SUPPORT
+        FROM edw.HOSPITAL_SERVICES_DIM
+       WHERE AGENCIES_PROVIDING_SUPPORT LIKE '%Insurance%';
+BEGIN
+   INSERT INTO edw.HOSPITAL_SERVICES_DIM HS (HOSPITAL_ID,
+                                              HOSPITAL_NAME,
+                                              SPECIALIST_AVAILABLE,
+                                              PROVISION_OF_FOOD,
+                                              SOURCE_OF_FOOD,
+                                              AGENCIES_PROVIDING_SUPPORT,
+                                              EMERGENCIES_HOURS,
+                                              INPAIENT_HOURS,
+                                              OUTPATIENT_HOURS)
+        SELECT HD.hospital_id,
+               HS.HOSPITAL_NAME,
+               HS.SPECIALIST_AVAILABLE,
+               HS.PROVISION_OF_FOOD,
+               HS.SOURCE_OF_FOOD,
+               HS.AGENCIES_PROVIDING_SUPPORT,
+               HS.EMERGENCIES_HOURS,
+               HS.INPAIENT_HOURS,
+               HS.OUTPATIENT_HOURS
+          FROM edw.HOSPITALS_DIM HD, ods.HOSPITAL_SERVICES HS
+         WHERE HD.HOSPITAL_NAME = HS.HOSPITAL_NAME
+               AND HD.HOSPITAL_ID NOT IN
+                      (SELECT HOSPITAL_ID FROM edw.HOSPITAL_SERVICES_DIM)
+      ORDER BY HOSPITAL_ID;
+
+   COMMIT;
+
+   FOR EMERGENCIES_HOURS_rec IN EMERGENCIES_HOURS_cur
+   LOOP
+      IF EMERGENCIES_HOURS_rec.EMERGENCIES_HOURS = '24' --the data type of the corresponding column is varchar2
+      THEN
+         UPDATE edw.HOSPITAL_SERVICES_DIM
+            SET ALL_DAY_SERVICE = 'Yes'
+          WHERE EMERGENCIES_HOURS = '24';
+          
+          elsif EMERGENCIES_HOURS_rec.EMERGENCIES_HOURS = 'N/A'
+          THEN
+         UPDATE edw.HOSPITAL_SERVICES_DIM
+            SET ALL_DAY_SERVICE = 'N/A'
+          WHERE EMERGENCIES_HOURS = 'N/A';
+          
+          else
+          UPDATE edw.HOSPITAL_SERVICES_DIM
+            SET ALL_DAY_SERVICE = 'No';
+          
+      END IF;
+      
+   END LOOP;
+
+   COMMIT;
+
+   FOR insurance_rec IN insurance_cur
+   LOOP
+      UPDATE edw.HOSPITAL_SERVICES_DIM
+         SET INSURANCE_COLLABORATION = 'Yes'
+       --WHERE AGENCIES_PROVIDING_SUPPORT LIKE '%Insurance%'
+       WHERE HOSPITAL_ID IN insurance_rec.HOSPITAL_ID;
+
+      UPDATE edw.HOSPITAL_SERVICES_DIM
+         SET INSURANCE_COLLABORATION = 'No'
+       WHERE HOSPITAL_ID NOT IN insurance_rec.HOSPITAL_ID;
+   END LOOP;
+
+   COMMIT;
+END;
+/
+
+--execute HOSPITAL_SERVICES_DIM_PROC
+
+
+CREATE OR REPLACE PROCEDURE NGO_DIM_PROC          --FOR INSERTING into NGO_DIM
+IS
+BEGIN
+   INSERT INTO edw.NGO_DIM
+      SELECT HOSPITAL_ID,
+             NG.HOSPITAL_NAME,
+             AGENCY_NAME,
+             IMPACTS,
+             NG.YEAR
+        FROM edw.HOSPITALS_DIM hd, ods.NGO NG
+       WHERE HD.HOSPITAL_NAME = NG.HOSPITAL_NAME
+             AND NG.HOSPITAL_NAME NOT IN
+                    (SELECT HOSPITAL_NAME FROM edw.NGO_DIM); --HOSPITAL NAME MUST BE PROVIDED IN ODS
+
+   COMMIT;
+END;
+/
+
+--execute NGO_DIM_PROC
+
+
+--SEQUENCE for ID (Staff_ID_SEQ) should have been created in stg
+
+CREATE OR REPLACE PROCEDURE HOSPITAL_EMPLOYEES_DIM_PROC --FOR INSERTING into HOSPITAL_EMPLOYEES_DIM
+IS
+BEGIN
+   INSERT INTO edw.HOSPITAL_EMPLOYEES_DIM (Staff_ID,
+                                            Hospital_ID,
+                                            Hospital_Name,
+                                            Full_Name,
+                                            Employment_Type,
+                                            Specialization,
+                                            Grade_Level,
+                                            Working_Hours)
+      SELECT Staff_ID_SEQ.NEXTVAL,
+             Hospital_ID,
+             hh.Hospital_Name,
+             hh.Full_Name,
+             hh.Employment_Type,
+             hh.Specialization,
+             hh.Grade_Level,
+             hh.Working_Hours
+        FROM ods.HOSPITAL_EMPLOYEES hh, edw.HOSPITALS_DIM hd
+       WHERE HH.HOSPITAL_NAME = HD.HOSPITAL_NAME
+             AND hh.HOSPITAL_NAME NOT IN
+                    (SELECT HOSPITAL_NAME FROM edw.HOSPITAL_EMPLOYEES_DIM);
+
+
+   COMMIT;
+END;
+/
+
+
+--execute HOSPITAL_EMPLOYEES_DIM_PROC
+
+
+CREATE OR REPLACE PROCEDURE HOSPITAL_EQUIPMENT_FACT_PROC --FOR INSERTING into HOSPITAL_EQUIPMENT_FACT
+IS
+BEGIN
+   INSERT INTO edw.HOSPITAL_EQUIPMENT_FACT
+        SELECT hospital_id,
+               TOWN_ID,
+               LGA_ID,
+               SENATORIAL_ID,
+               NO_WARDS,
+               NO_BEDS,
+               NO_TOILETS,
+               NO_AMBULANCES,
+               NO_X_RAY,
+               NO_GENERATOR,
+               NO_STRETCHERS,
+               NO_LIFE_SUPPORT,
+               NO_ULTRA_SOUND_MACHINE,
+               NO_AMBULATORY_BAGS,
+               NO_MUCUS_EXTRACTORS,
+               NO_WHEELCHAIRS,
+               OTHER_EQUIPMENT
+          FROM edw.HOSPITALS_DIM HD, ods.HOSPITAL_EQUIPMENT_FIG HE
+         WHERE HD.HOSPITAL_NAME = HE.HOSPITAL_NAME
+               AND hospital_id NOT IN
+                      (SELECT hospital_id FROM edw.HOSPITAL_EQUIPMENT_FACT)
+      ORDER BY HOSPITAL_ID;
+
+   COMMIT;
+END;
+/
+
+--execute HOSPITAL_EQUIPMENT_FACT_PROC
+
+
+CREATE OR REPLACE PROCEDURE HOSPITAL_STAFFS_FACT_PROC --FOR INSERTING into HOSPITAL_STAFFS_FACT
+IS
+BEGIN
+   INSERT INTO edw.HOSPITAL_STAFFS_FACT (HOSPITAL_ID,
+                                          TOWN_ID,
+                                          LGA_ID,
+                                          SENATORIAL_ID,
+                                          TOWN_POPULATION_ESTIMATE,
+                                          NO_CONSULTANTS,
+                                          NO_MEDICAL_OFFICERS,
+                                          NO_NURSES,
+                                          NO_LABORATORY_STAFF,
+                                          SPECIALIST_AVAILABLE)
+        SELECT HD.HOSPITAL_ID,
+               HD.TOWN_ID,
+               HD.LGA_ID,
+               HD.SENATORIAL_ID,
+               TC.TOWN_POPULATION_ESTIMATE,
+               HS.NO_CONSULTANTS,
+               HS.NO_MEDICAL_OFFICERS,
+               HS.NO_NURSES,
+               HS.NO_LABORATORY_STAFF,
+               HS.SPECIALIST_AVAILABLE
+          FROM edw.HOSPITALS_DIM HD,
+               ods.HOSPITAL_STAFFS_FIG HS,
+               edw.TOWN_CITY_DIM TC
+         WHERE HD.HOSPITAL_NAME = HS.HOSPITAL_NAME AND HD.TOWN_ID = TC.TOWN_ID
+               AND HD.HOSPITAL_ID NOT IN
+                      (SELECT HOSPITAL_ID FROM edw.HOSPITAL_STAFFS_FACT) --SHOULD USE ods.HOSPITAL_STAFFS_FIG IN WHERE CONDITION
+      ORDER BY HOSPITAL_ID;
+
+
+   COMMIT;
+END;
+/
+
+
+--execute HOSPITAL_STAFFS_FACT_PROC
+
+
+CREATE OR REPLACE PROCEDURE cm_PROC (p_year IN NUMBER)     --FOR INSERTING into edw.CHILD_MORTALITY_FACT   --check columns  status and date_processed in corresponding ods tables
+IS
+   CURSOR cm_cur (
+      p_year VARCHAR2)
+   IS
+      SELECT cm.HOSPITAL_NAME,
+             HOSPITAL_ID,
+             tc.TOWN_ID,
+             tc.LGA_ID,
+             tc.SENATORIAL_ID,
+             TOWN_POPULATION_ESTIMATE,
+             CM_NO_OCCURENCE,
+             CM_MALE,
+             CM_FEMALE,
+             CM_MAJOR_CAUSES,
+             cm.YEAR,
+             status,
+             date_processed
+        FROM ods.CHILD_MORTALITY cm,
+             edw.HOSPITALS_DIM hd,
+             edw.TOWN_CITY_DIM tc
+       WHERE     CM.HOSPITAL_NAME = HD.HOSPITAL_NAME
+             AND HD.TOWN_ID = TC.TOWN_ID
+             AND status IS NULL
+             AND date_processed IS NULL
+             AND cm.HOSPITAL_NAME IS NOT NULL
+             
+             AND cm.year = p_year;
+--add status and date processed
+
+BEGIN
+   FOR cm_rec IN cm_cur (p_year)
+   LOOP
+      INSERT INTO edw.CHILD_MORTALITY_FACT
+           VALUES (cm_rec.HOSPITAL_ID,
+                   cm_rec.TOWN_ID,
+                   cm_rec.LGA_ID,
+                   cm_rec.SENATORIAL_ID,
+                   cm_rec.TOWN_POPULATION_ESTIMATE,
+                   cm_rec.CM_NO_OCCURENCE,
+                   cm_rec.CM_MALE,
+                   cm_rec.CM_FEMALE,
+                   cm_rec.CM_MAJOR_CAUSES,
+                   cm_rec.YEAR);
+
+      --to mark rows as done
+      UPDATE ods.CHILD_MORTALITY     --grant update on CHILD_MORTALITY to stg
+         SET STATUS = 'Processed', date_processed = SYSDATE
+       WHERE year = cm_rec.year AND HOSPITAL_NAME IS NOT NULL;
+
+      UPDATE ods.CHILD_MORTALITY
+         SET STATUS = 'Hospital Name Missing', date_processed = NULL
+       WHERE year = cm_rec.year AND HOSPITAL_NAME IS NULL;
+
+      COMMIT;
+      
+   /*--to reset status
+   update ods.CHILD_MORTALITY
+   set STATUS = null,
+   date_processed = null;*/
+
+   END LOOP;
+END;
+/
+
+--execute cm_PROC(enter year);
+
+
+
+
+
+
+CREATE OR REPLACE PROCEDURE mm_PROC (p_year IN NUMBER)   --FOR INSERTING into edw.MATERNITY_MORTALITY_FACT   --check columns  status and date_processed in corresponding ods tables
+IS
+   CURSOR mm_cur (
+      p_year VARCHAR2)
+   IS
+      SELECT HOSPITAL_ID,
+             hd.TOWN_ID,
+             hd.LGA_ID,
+             hd.SENATORIAL_ID,
+             TOWN_POPULATION_ESTIMATE,
+             MM_NO_OCCURENCE,
+             MM_AGE_12_19,
+             MM_AGE_20_35,
+             MM_AGE_36_49,
+             MM_AGE_50_ABOVE,
+             MM_TOTAL,
+             mm.YEAR,
+             status,
+             date_processed
+        FROM ods.MATERNITY_MORTALITY mm,
+             edw.HOSPITALS_DIM hd,
+             edw.TOWN_CITY_DIM tc
+       WHERE     mm.HOSPITAL_NAME = HD.HOSPITAL_NAME
+             AND HD.TOWN_ID = TC.TOWN_ID
+             AND status IS NULL
+             AND date_processed IS NULL
+             AND mm.HOSPITAL_NAME IS NOT NULL
+             AND mm.year = p_year;
+--add status and date processed to ods.MATERNITY_MORTALITY
+
+BEGIN
+   FOR mm_rec IN mm_cur (p_year)
+   LOOP
+      INSERT INTO edw.MATERNITY_MORTALITY_FACT
+           VALUES (mm_rec.HOSPITAL_ID,
+                   mm_rec.TOWN_ID,
+                   mm_rec.LGA_ID,
+                   mm_rec.SENATORIAL_ID,
+                   mm_rec.TOWN_POPULATION_ESTIMATE,
+                   mm_rec.MM_NO_OCCURENCE,
+                   mm_rec.MM_AGE_12_19,
+                   mm_rec.MM_AGE_20_35,
+                   mm_rec.MM_AGE_36_49,
+                   mm_rec.MM_AGE_50_ABOVE,
+                   mm_rec.MM_TOTAL,
+                   mm_rec.YEAR);
+
+      --to mark rows as done in ods table
+      UPDATE ods.MATERNITY_MORTALITY --grant update on MATERNITY_MORTALITY to stg
+         SET STATUS = 'Processed', date_processed = SYSDATE
+       WHERE year = mm_rec.year AND HOSPITAL_NAME IS NOT NULL;
+
+      UPDATE ods.MATERNITY_MORTALITY
+         SET STATUS = 'Hospital Name Missing', date_processed = NULL
+       WHERE year = mm_rec.year AND HOSPITAL_NAME IS NULL;
+
+      COMMIT;
+      
+   /*   
+   --to reset status
+   update ods.MATERNITY_MORTALITY
+   set STATUS = null,
+   date_processed = null;
+   
+   */
+
+   END LOOP;
+END;
+/
+
+--execute mm_PROC(enter year);
+
+
+
+CREATE OR REPLACE PROCEDURE tp_PROC (p_year IN NUMBER)     --FOR INSERTING into edw.TEENAGE_PREGNANCY_FACT   --check columns  status and date_processed in corresponding ods tables
+IS
+   CURSOR tp_cur (
+      p_year VARCHAR2)
+   IS
+      SELECT tp.HOSPITAL_NAME,
+             HOSPITAL_ID,
+             tc.TOWN_ID,
+             tc.LGA_ID,
+             tc.SENATORIAL_ID,
+             TOWN_POPULATION_ESTIMATE,
+             TP_NO_OCCURENCE,
+             TP_SUCCESSFUL_DELIVERIES,
+             TP_FAILED_DELIVERIES,
+             TP_RESULTING_DEATH,
+             TP_MAJOR_CAUSES,
+             tp.YEAR,
+             status,
+             date_processed
+        FROM ods.TEENAGE_PREGNANCY tp,
+             edw.HOSPITALS_DIM hd,
+             edw.TOWN_CITY_DIM tc
+       WHERE     tp.HOSPITAL_NAME = HD.HOSPITAL_NAME
+             AND HD.TOWN_ID = TC.TOWN_ID
+             AND status IS NULL
+             AND date_processed IS NULL
+             AND tp.HOSPITAL_NAME IS NOT NULL
+             AND tp.year = p_year;
+--add status and date processed to ods.TEENAGE_PREGNANCY
+
+
+
+BEGIN
+   FOR tp_rec IN tp_cur (p_year)
+   LOOP
+      INSERT INTO edw.TEENAGE_PREGNANCY_FACT
+           VALUES (tp_rec.HOSPITAL_ID,
+                   tp_rec.TOWN_ID,
+                   tp_rec.LGA_ID,
+                   tp_rec.SENATORIAL_ID,
+                   tp_rec.TOWN_POPULATION_ESTIMATE,
+                   tp_rec.TP_NO_OCCURENCE,
+                   tp_rec.TP_SUCCESSFUL_DELIVERIES,
+                   tp_rec.TP_FAILED_DELIVERIES,
+                   tp_rec.TP_RESULTING_DEATH,
+                   tp_rec.TP_MAJOR_CAUSES,
+                   tp_rec.YEAR);
+
+      --to mark rows as done in ods table
+      UPDATE ods.TEENAGE_PREGNANCY --grant update on TEENAGE_PREGNANCY to stg
+         SET STATUS = 'Processed', date_processed = SYSDATE
+       WHERE year = tp_rec.year AND HOSPITAL_NAME IS NOT NULL;
+
+      UPDATE ods.TEENAGE_PREGNANCY
+         SET STATUS = 'Hospital Name Missing', date_processed = NULL
+       WHERE year = tp_rec.year AND HOSPITAL_NAME IS NULL;
+
+      COMMIT;
+      
+  /* --to reset status
+   update ods.TEENAGE_PREGNANCY
+   set STATUS = null,
+   date_processed = null;
+   
+   */
+
+   END LOOP;
+END;
+/
+
+--execute tp_PROC(enter year);
+
+
+
+/*
+--if you need to purge the Data warehouse for the Hospital Project
+
+/*
+create or replace procedure purge_edw_proc 
+as
+
+begin
+
+delete from edw.CHILD_MORTALITY_FACT;
+
+delete from edw.TEENAGE_PREGNANCY_FACT;
+
+delete from edw.MATERNITY_MORTALITY_FACT;
+
+delete from edw.NGO_DIM;
+
+delete from edw.HOSPITAL_CHALLENGES_DIM;
+
+delete from edw.HOSPITAL_EMPLOYEES_DIM;
+
+delete from edw.HOSPITAL_EQUIPMENT_FACT;
+
+delete from edw.HOSPITAL_FACILITIES_DIM;
+
+delete from edw.HOSPITAL_SERVICES_DIM;
+
+delete from edw.HOSPITAL_STAFFS_FACT;
+
+delete from edw.HOSPITALS_DIM;
+
+delete from edw.TOWN_CITY_DIM;
+
+delete from edw.LGA_DIM;
+
+delete from edw.S_DISTRICT_DIM;
+
+delete from edw.YEAR_DIM;
+
+--commit
+
+end;
+/
+
+*/
+
+--execute purge_edw_proc
+*/
+
+--2:18 AM 3/23/2017
