@@ -1,0 +1,83 @@
+EDW Facts Tables.txt
+CREATE TABLE HOSPITAL_EQUIPMENT_FACT
+(
+   Hospital_ID              NUMBER    REFERENCES HOSPITALS_DIM (Hospital_ID),
+   Town_id                  NUMBER    REFERENCES TOWN_CITY_DIM (Town_id),
+   Lga_Id                   NUMBER    REFERENCES LGA_DIM (LGA_Id),
+   Senatorial_id            NUMBER    REFERENCES S_DISTRICT_DIM (Senatorial_Id),
+   No_Wards                 NUMBER,
+   No_Beds                  NUMBER,
+   No_Toilets               NUMBER,
+   No_Ambulances            NUMBER,
+   No_X_Ray                 NUMBER,
+   No_Generator             NUMBER,
+   No_Stretchers            NUMBER,
+   No_Life_Support          NUMBER,
+   No_Ultra_Sound_Machine   NUMBER,
+   No_Ambulatory_Bags       NUMBER,
+   No_Mucus_Extractors      NUMBER,
+   No_Wheelchairs           NUMBER,
+   Other_Equipment          VARCHAR2 (600)
+);
+
+
+
+CREATE TABLE HOSPITAL_STAFFS_FACT
+(
+   Hospital_ID                NUMBER    REFERENCES HOSPITALS_DIM (Hospital_ID),
+   Town_id                    NUMBER    REFERENCES TOWN_CITY_DIM (Town_id),
+   Lga_Id                     NUMBER    REFERENCES LGA_DIM (LGA_Id),
+   Senatorial_id              NUMBER    REFERENCES S_DISTRICT_DIM (Senatorial_Id),
+   No_Consultants             NUMBER,
+   No_Medical_Officers        NUMBER,
+   No_Nurses                  NUMBER,
+   No_Laboratory_Staff        NUMBER,
+   Specialist_Available       VARCHAR2 (400)
+);
+
+
+CREATE TABLE TEENAGE_PREGNANCY_FACT
+(
+   Hospital_ID                NUMBER    REFERENCES HOSPITALS_DIM (Hospital_ID),
+   Town_id                    NUMBER    REFERENCES TOWN_CITY_DIM (Town_id),
+   Lga_Id                     NUMBER    REFERENCES LGA_DIM (LGA_Id),
+   Senatorial_id              NUMBER    REFERENCES S_DISTRICT_DIM (Senatorial_Id),
+   TP_No_Occurence            NUMBER,
+   TP_Successful_deliveries   NUMBER,
+   TP_Failed_deliveries       NUMBER,
+   TP_Resulting_death         NUMBER,
+   TP_Major_causes            VARCHAR2 (400),
+   Year                       NUMBER    REFERENCES YEAR_DIM (YEAR)
+);
+
+
+
+CREATE TABLE MATERNITY_MORTALITY_FACT
+(
+   Hospital_ID                NUMBER    REFERENCES HOSPITALS_DIM (Hospital_ID),
+   Town_id                    NUMBER    REFERENCES TOWN_CITY_DIM (Town_id),
+   Lga_Id                     NUMBER    REFERENCES LGA_DIM (LGA_Id),
+   Senatorial_id              NUMBER    REFERENCES S_DISTRICT_DIM (Senatorial_Id),
+   MM_No_Occurence            NUMBER,
+   MM_Age_12_19               NUMBER,
+   MM_Age_20_35               NUMBER,
+   MM_Age_36_49               NUMBER,
+   MM_Age_50_Above            NUMBER,
+   MM_Total                   NUMBER,
+   Year                       NUMBER    REFERENCES YEAR_DIM (YEAR)
+);
+
+
+
+CREATE TABLE CHILD_MORTALITY_FACT
+(
+   Hospital_ID                NUMBER    REFERENCES HOSPITALS_DIM (Hospital_ID),
+   Town_id                    NUMBER    REFERENCES TOWN_CITY_DIM (Town_id),
+   Lga_Id                     NUMBER    REFERENCES LGA_DIM (LGA_Id),
+   Senatorial_id              NUMBER    REFERENCES S_DISTRICT_DIM (Senatorial_Id),
+   CM_No_Occurence            NUMBER,
+   CM_Male                    NUMBER,
+   CM_Female                  NUMBER,
+   CM_Major_Causes            VARCHAR2 (400),
+   Year                       NUMBER    REFERENCES YEAR_DIM (YEAR)
+);
